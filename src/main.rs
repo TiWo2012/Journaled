@@ -1,3 +1,4 @@
+use chrono::{Datelike, Local};
 use eframe::egui;
 
 fn main() -> eframe::Result<()> {
@@ -20,7 +21,13 @@ struct Date {
 
 impl Default for Date {
     fn default() -> Self {
-        Self { day: 1, month: 1, year: 2024 }
+        let now = Local::now();
+
+        Self {
+            day: now.day(),
+            month: now.month(),
+            year: now.year() as u32,
+        }
     }
 }
 
@@ -32,7 +39,11 @@ struct Note {
 
 impl Note {
     fn new(title: String, content: String, date: Date) -> Self {
-        Self { title, content, date }
+        Self {
+            title,
+            content,
+            date,
+        }
     }
 
     fn ui(&mut self, ui: &mut egui::Ui) {
@@ -48,9 +59,21 @@ impl Note {
 
         ui.label("Date:");
         ui.horizontal(|ui| {
-            ui.add(egui::DragValue::new(&mut self.date.day).range(1..=31).prefix("Day: "));
-            ui.add(egui::DragValue::new(&mut self.date.month).range(1..=12).prefix("Month: "));
-            ui.add(egui::DragValue::new(&mut self.date.year).range(1900..=2100).prefix("Year: "));
+            ui.add(
+                egui::DragValue::new(&mut self.date.day)
+                    .range(1..=31)
+                    .prefix("Day: "),
+            );
+            ui.add(
+                egui::DragValue::new(&mut self.date.month)
+                    .range(1..=12)
+                    .prefix("Month: "),
+            );
+            ui.add(
+                egui::DragValue::new(&mut self.date.year)
+                    .range(1900..=9999)
+                    .prefix("Year: "),
+            );
         });
     }
 }
@@ -73,8 +96,6 @@ impl Default for NoteApp {
 impl eframe::App for NoteApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Simple Note App");
-            ui.separator();
             self.note.ui(ui);
         });
     }
