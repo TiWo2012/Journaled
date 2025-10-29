@@ -51,39 +51,6 @@ impl Default for Note {
     }
 }
 
-impl Note {
-    fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.label("Title:");
-        ui.text_edit_singleline(&mut self.title);
-
-        ui.separator();
-
-        ui.label("Content:");
-        ui.text_edit_multiline(&mut self.content);
-
-        ui.separator();
-
-        ui.label("Date:");
-        ui.horizontal(|ui| {
-            ui.add(
-                egui::DragValue::new(&mut self.date.day)
-                    .range(1..=31)
-                    .prefix("Day: "),
-            );
-            ui.add(
-                egui::DragValue::new(&mut self.date.month)
-                    .range(1..=12)
-                    .prefix("Month: "),
-            );
-            ui.add(
-                egui::DragValue::new(&mut self.date.year)
-                    .range(1900..=9999)
-                    .prefix("Year: "),
-            );
-        });
-    }
-}
-
 // -----------------------------
 // Application
 // -----------------------------
@@ -95,24 +62,78 @@ struct NoteApp {
 
 impl NoteApp {
     fn ui(&mut self, ui: &mut egui::Ui) {
-        self.note.ui(ui);
-        ui.separator();
+        ui.vertical_centered(|ui| {
+            ui.heading("📝 Journal Entry");
+        });
 
-        ui.text_edit_singleline(self.save_path.get_or_insert_with(|| {
-            format!(
-                "note{}_{}_{}.txt",
-                self.note.date.year, self.note.date.month, self.note.date.day
-            )
-        }));
+        ui.add_space(10.0);
 
-        if ui.button("Save Note").clicked() {
-            self.save();
-            self.last_save_msg = Some("Note saved successfully!".into());
-        }
+        egui::Frame::group(ui.style())
+            .inner_margin(egui::vec2(10.0, 10.0))
+            .show(ui, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.label("Title:");
+                    ui.text_edit_singleline(&mut self.note.title);
+                });
 
-        if let Some(msg) = &self.last_save_msg {
-            ui.colored_label(egui::Color32::GREEN, msg);
-        }
+                ui.separator();
+
+                ui.vertical_centered(|ui| {
+                    ui.label("Content:");
+                    ui.add(
+                        egui::TextEdit::multiline(&mut self.note.content)
+                            .desired_rows(15)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+
+                ui.separator();
+
+                ui.vertical_centered(|ui| {
+                    ui.label(format!(
+                        "📅 Date: {:02}-{:02}-{}",
+                        self.note.date.day, self.note.date.month, self.note.date.year
+                    ));
+                });
+            });
+
+        ui.add_space(10.0);
+
+        ui.vertical_centered(|ui| {
+            ui.add_space(20.0); // top padding
+            ui.set_max_width(400.0); // limit width like a document column
+
+            egui::Frame::group(ui.style())
+                .inner_margin(egui::vec2(15.0, 12.0))
+                .stroke(egui::Stroke::new(1.0, egui::Color32::LIGHT_BLUE))
+                .corner_radius(egui::CornerRadius::same(10))
+                .shadow(egui::epaint::Shadow {
+                    offset: [0, 2],
+                    blur: 5,
+                    color: egui::Color32::from_black_alpha(50),
+                    spread: 0,
+                })
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label("💾 Save Path:");
+                        ui.text_edit_singleline(
+                            self.save_path.get_or_insert_with(|| "note.txt".into()),
+                        );
+
+                        ui.add_space(10.0);
+
+                        if ui.button("Save Note").clicked() {
+                            self.save();
+                            self.last_save_msg = Some("Note saved successfully!".into());
+                        }
+
+                        if let Some(msg) = &self.last_save_msg {
+                            ui.add_space(8.0);
+                            ui.colored_label(egui::Color32::LIGHT_GREEN, msg);
+                        }
+                    });
+                });
+        });
     }
 
     fn save(&self) {
