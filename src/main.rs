@@ -1,6 +1,6 @@
 use chrono::{Datelike, Local};
 use eframe::egui;
-use std::fs;
+use std::{default, fs};
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions::default();
@@ -38,15 +38,17 @@ struct Note {
     date: Date,
 }
 
-impl Note {
-    fn new(title: String, content: String, date: Date) -> Self {
+impl Default for Note {
+    fn default() -> Self {
         Self {
-            title,
-            content,
-            date,
+            title: "New Note".into(),
+            content: "".into(),
+            date: Date::default(),
         }
     }
+}
 
+impl Note {
     fn ui(&mut self, ui: &mut egui::Ui) {
         ui.label("Title:");
         ui.text_edit_singleline(&mut self.title);
@@ -118,8 +120,6 @@ impl NoteApp {
 
             if let Err(err) = fs::write(path, content) {
                 eprintln!("Error saving note: {}", err);
-            } else {
-                println!("✅ Saved note to {}", path);
             }
         }
     }
@@ -128,7 +128,7 @@ impl NoteApp {
 impl Default for NoteApp {
     fn default() -> Self {
         Self {
-            note: Note::new("New Note".into(), "".into(), Date::default()),
+            note: Note::default(),
             save_path: None,
             last_save_msg: None,
         }
