@@ -1,7 +1,10 @@
 use chrono::{Datelike, Local};
 use eframe::egui;
-use std::{default, fs};
+use std::fs;
 
+// -----------------------------
+// Entry Point
+// -----------------------------
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions::default();
     eframe::run_native(
@@ -95,7 +98,12 @@ impl NoteApp {
         self.note.ui(ui);
         ui.separator();
 
-        ui.text_edit_singleline(self.save_path.get_or_insert_with(|| format!("note{}_{}_{}.txt", self.note.date.year, self.note.date.month, self.note.date.day)));
+        ui.text_edit_singleline(self.save_path.get_or_insert_with(|| {
+            format!(
+                "note{}_{}_{}.txt",
+                self.note.date.year, self.note.date.month, self.note.date.day
+            )
+        }));
 
         if ui.button("Save Note").clicked() {
             self.save();
