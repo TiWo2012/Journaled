@@ -1,5 +1,6 @@
 use chrono::{Datelike, Local};
 use eframe::egui;
+use egui::accesskit::ActionData;
 use std::fs;
 
 // -----------------------------
@@ -175,7 +176,13 @@ impl NoteApp {
                 self.note.content
             );
 
-            if let Err(err) = fs::write(path, content) {
+            fs::DirBuilder::new()
+                .recursive(true)
+                .create("notes")
+                .unwrap_or(());
+            let actual_save_path = format!("notes/{}", path);
+
+            if let Err(err) = fs::write(actual_save_path, content) {
                 eprintln!("Error saving note: {}", err);
             }
         }
