@@ -62,18 +62,34 @@ struct NoteApp {
 
 impl NoteApp {
     fn ui(&mut self, ui: &mut egui::Ui) {
-        // Title
-        ui.vertical_centered(|ui| {
-            ui.heading("📝 Journal Entry");
+        ui.horizontal(|ui| {
+            // left side (file browser)
+            ui.vertical(|ui| {
+                ui.set_max_width(200.0);
+                ui.set_min_width(150.0);
+                self.ui_browser(ui);
+            });
+
+            ui.separator();
+
+            // right side (editor + save)
+            ui.vertical_centered(|ui| {
+                // Title
+                ui.heading("📝 Journal Entry");
+                ui.add_space(10.0);
+
+                // Editor
+                self.ui_editor(ui);
+                ui.add_space(10.0);
+
+                // Save
+                self.ui_save(ui);
+            });
         });
-        ui.add_space(10.0);
+    }
 
-        // Editor
-        self.ui_editor(ui);
-        ui.add_space(10.0);
-
-        // Save
-        self.ui_save(ui);
+    fn ui_browser(&mut self, _ui: &mut egui::Ui) {
+        // TODO: Implement a file browser wich scans all files wich start with note and then displays them like the side bar from chatgpt
     }
 
     fn ui_editor(&mut self, ui: &mut egui::Ui) {
