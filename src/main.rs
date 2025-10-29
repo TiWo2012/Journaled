@@ -65,8 +65,11 @@ impl NoteApp {
         ui.horizontal(|ui| {
             // left side (file browser)
             ui.vertical(|ui| {
-                ui.set_max_width(200.0);
+                // size settings for the explorer
                 ui.set_min_width(150.0);
+                ui.set_max_width(200.0);
+
+                // the explorer itself
                 self.ui_browser(ui);
             });
 
