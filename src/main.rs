@@ -1,6 +1,5 @@
 use chrono::{Datelike, Local};
 use eframe::egui;
-use egui::accesskit::ActionData;
 use std::fs;
 
 // -----------------------------
@@ -92,8 +91,59 @@ impl NoteApp {
         });
     }
 
-    fn ui_browser(&mut self, _ui: &mut egui::Ui) {
+    fn ui_browser(&mut self, ui: &mut egui::Ui) {
         // TODO: Implement a file browser wich scans all files wich start with note and then displays them like the side bar from chatgpt
+        fs::read_dir("notes/")
+            .unwrap_or_else(|_| fs::read_dir(".").unwrap())
+            .for_each(|entry| {
+                if let Ok(entry) = entry {
+                    let file_name = entry.file_name().into_string().unwrap_or_default();
+                    if file_name.starts_with("note") {
+                        // Here you would add UI elements to display the file
+                        // For now, we just print the file names to the console
+                        println!("Found note file: {}", file_name);
+
+                        ui.vertical_centered(|ui| {
+                            if ui
+                                .button(&file_name)
+                                .on_hover_text("Click to load this note")
+                                .clicked()
+                            {
+                                // Load the note
+                                self.load_note(&file_name);
+                            }
+                        });
+                    }
+                }
+            });
+    }
+
+    fn load_note(&mut self, file_name: &str) {
+        let path = format!("notes/{}", file_name);
+        if let Ok(content) = fs::read_to_string(&path) {
+            let mut lines = content.lines();
+            if let Some(title_line) = lines.next() {
+                if title_line.starts_with("Title: ") {
+                    self.note.title = title_line[7..].to_string();
+                }
+            }
+            if let Some(date_line) = lines.next() {
+                if date_line.starts_with("Date: ") {
+                    let date_str = &date_line[6..];
+                    let parts: Vec<&str> = date_str.split('-').collect();
+                    if parts.len() == 3 {
+                        if let (Ok(day), Ok(month), Ok(year)) = (
+                            parts[0].parse::<u32>(),
+                            parts[1].parse::<u32>(),
+                            parts[2].parse::<u32>(),
+                        ) {
+                            self.note.date = Date { day, month, year };
+                        }
+                    }
+                }
+            }
+            self.note.content = lines.collect::<Vec<&str>>().join("\n");
+        }
     }
 
     fn ui_editor(&mut self, ui: &mut egui::Ui) {
@@ -146,7 +196,9 @@ impl NoteApp {
                     ui.vertical_centered(|ui| {
                         ui.label("💾 Save Path:");
                         ui.text_edit_singleline(
-                            self.save_path.get_or_insert_with(|| "note.txt".into()),
+                            self.save_path.get_or_insert_with(|| {
+                                format!("note_{}.txt", self.note.title).into()
+                            }),
                         );
 
                         ui.add_space(10.0);
