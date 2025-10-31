@@ -100,14 +100,23 @@ impl NoteApp {
                     let file_name = entry.file_name().into_string().unwrap_or_default();
                     // Here you would add UI elements to display the files
                     ui.vertical_centered(|ui| {
-                        if ui
-                            .button(&file_name)
-                            .on_hover_text("Click to load this note")
-                            .clicked()
-                        {
-                            // Load the note
-                            self.load_note(&file_name);
-                        }
+                        ui.horizontal(|ui| {
+                            if ui
+                                .button(&file_name)
+                                .on_hover_text("Click to load this note")
+                                .clicked()
+                            {
+                                // Load the note
+                                self.load_note(&file_name);
+                            }
+
+                            if ui.button("❌").on_hover_text("Delete this note").clicked() {
+                                let path = format!("notes/{}", file_name);
+                                if let Err(err) = fs::remove_file(&path) {
+                                    eprintln!("Error deleting note: {}", err);
+                                }
+                            }
+                        });
                     });
                 }
             });
