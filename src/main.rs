@@ -108,62 +108,61 @@ impl NoteApp {
             ui.heading("📁 Notes");
             ui.add_space(5.0);
             ui.label("Search:");
+
             ui.horizontal_centered(|ui| {
                 ui.text_edit_singleline(&mut self.search_query);
 
                 if ui.button("❌").on_hover_text("Clear search").clicked() {
                     self.search_query.clear();
                 }
-            })
+            });
         });
 
         ui.separator();
         ui.add_space(5.0);
 
-        // List files
-        let entries = fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
+        let available_height = ui.available_height(); // how much vertical space remains
 
-        for entry in entries.flatten() {
-            let file_name = entry.file_name().into_string().unwrap_or_default();
+        egui::ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .stick_to_bottom(false)
+            .max_height(available_height - 80.0) // take up 80% of the remaining window height
+            .show(ui, |ui| {
+                let entries = fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
 
-            // 🧠 Filter by search query
-            if !self.search_query.is_empty()
-                && !file_name
-                    .to_lowercase()
-                    .contains(&self.search_query.to_lowercase())
-            {
-                continue;
-            }
+                for entry in entries.flatten() {
+                    let file_name = entry.file_name().into_string().unwrap_or_default();
 
-            ui.horizontal(|ui| {
-                if ui
-                    .button(&file_name)
-                    .on_hover_text("Click to load this note")
-                    .clicked()
-                {
-                    self.load_note(&file_name);
-                }
-
-                if ui.button("❌").on_hover_text("Delete this note").clicked() {
-                    let path = format!("notes/{}", file_name);
-                    if let Err(err) = fs::remove_file(&path) {
-                        eprintln!("Error deleting note: {}", err);
+                    if !self.search_query.is_empty()
+                        && !file_name
+                            .to_lowercase()
+                            .contains(&self.search_query.to_lowercase())
+                    {
+                        continue;
                     }
+
+                    egui::Frame::group(ui.style())
+                        .inner_margin(egui::vec2(8.0, 8.0))
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                if ui.button(&file_name).clicked() {
+                                    self.load_note(&file_name);
+                                }
+
+                                if ui.button("❌").clicked() {
+                                    let path = format!("notes/{}", file_name);
+                                    let _ = fs::remove_file(&path);
+                                }
+                            });
+                        });
                 }
             });
-        }
 
         ui.separator();
         ui.add_space(10.0);
 
         // ➕ New Note button
-        ui.vertical_centered(|ui| {
-            if ui.button("➕ New Note").clicked() {
-                self.note = Note::default();
-                self.save_path = None;
-                self.last_save_msg = None;
-            }
-        });
+        self.ui_new_note(ui);
     }
 
     fn ui_editor(&mut self, ui: &mut egui::Ui) {
@@ -229,7 +228,7 @@ impl NoteApp {
                         ui.add_space(10.0);
 
                         if ui.button("Save Note").clicked() {
-                            self.save();
+                            self.save_note();
                             self.last_save_msg = Some("Note saved successfully!".into());
                         }
 
@@ -242,7 +241,7 @@ impl NoteApp {
         });
     }
 
-    fn save(&self) {
+    fn save_note(&self) {
         if let Some(path) = &self.save_path {
             let content = format!(
                 "Title: {}\nDate: {:02}-{:02}-{}\n\n{}",
@@ -263,6 +262,20 @@ impl NoteApp {
                 eprintln!("Error saving note: {}", err);
             }
         }
+    }
+
+    fn ui_new_note(&mut self, ui: &mut egui::Ui) {
+        ui.vertical_centered(|ui| {
+            if ui.button("➕ New Note").clicked() {
+                self.new_note();
+            }
+        });
+    }
+
+    fn new_note(&mut self) {
+        self.note = Note::default();
+        self.save_path = None;
+        self.last_save_msg = None;
     }
 
     fn load_note(&mut self, file_name: &str) {
@@ -296,6 +309,14 @@ impl NoteApp {
 
 impl eframe::App for NoteApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // keyboard shortcuts
+        if ctx.input(|i| i.key_pressed(egui::Key::S) && i.modifiers.ctrl) {
+            self.save_note();
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::N) && i.modifiers.ctrl) {
+            self.new_note();
+        }
+
         egui::CentralPanel::default().show(ctx, |ui| {
             self.ui(ui);
         });
