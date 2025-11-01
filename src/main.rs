@@ -121,12 +121,9 @@ impl NoteApp {
         ui.separator();
         ui.add_space(5.0);
 
-        let available_height = ui.available_height(); // how much vertical space remains
-
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .stick_to_bottom(false)
-            .max_height(available_height - 80.0) // take up 80% of the remaining window height
             .show(ui, |ui| {
                 let entries = fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
 
@@ -140,22 +137,40 @@ impl NoteApp {
                     {
                         continue;
                     }
+                }
 
-                    egui::Frame::group(ui.style())
-                        .inner_margin(egui::vec2(8.0, 8.0))
-                        .show(ui, |ui| {
+                let available_height = ui.available_height();
+                let desired_height = (available_height * 0.6).clamp(150.0, 400.0);
+
+                // TODO: Fix the scroplable area
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false; 2])
+                    .stick_to_bottom(false)
+                    .max_height(800.0) // ensure it never grows beyond this
+                    .show(ui, |ui| {
+                        let entries =
+                            fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
+                        for entry in entries.flatten() {
+                            let file_name = entry.file_name().into_string().unwrap_or_default();
+
+                            if !self.search_query.is_empty()
+                                && !file_name
+                                    .to_lowercase()
+                                    .contains(&self.search_query.to_lowercase())
+                            {
+                                continue;
+                            }
+
                             ui.horizontal(|ui| {
                                 if ui.button(&file_name).clicked() {
                                     self.load_note(&file_name);
                                 }
-
                                 if ui.button("❌").clicked() {
-                                    let path = format!("notes/{}", file_name);
-                                    let _ = fs::remove_file(&path);
+                                    let _ = fs::remove_file(format!("notes/{}", file_name));
                                 }
                             });
-                        });
-                }
+                        }
+                    });
             });
 
         ui.separator();
