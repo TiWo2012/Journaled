@@ -58,6 +58,18 @@ struct NoteApp {
     note: Note,
     save_path: Option<String>,
     last_save_msg: Option<String>,
+    search_query: String,
+}
+
+impl Default for NoteApp {
+    fn default() -> Self {
+        Self {
+            note: Note::default(),
+            save_path: None,
+            last_save_msg: None,
+            search_query: String::new(),
+        }
+    }
 }
 
 impl NoteApp {
@@ -92,34 +104,66 @@ impl NoteApp {
     }
 
     fn ui_file_browser(&mut self, ui: &mut egui::Ui) {
-        // TODO: Implement a file browser wich scans all files wich start with note and then displays them like the side bar from chatgpt
-        fs::read_dir("notes/")
-            .unwrap_or_else(|_| fs::read_dir(".").unwrap())
-            .for_each(|entry| {
-                if let Ok(entry) = entry {
-                    let file_name = entry.file_name().into_string().unwrap_or_default();
-                    // Here you would add UI elements to display the files
-                    ui.vertical_centered(|ui| {
-                        ui.horizontal(|ui| {
-                            if ui
-                                .button(&file_name)
-                                .on_hover_text("Click to load this note")
-                                .clicked()
-                            {
-                                // Load the note
-                                self.load_note(&file_name);
-                            }
+        ui.vertical_centered(|ui| {
+            ui.heading("📁 Notes");
+            ui.add_space(5.0);
+            ui.label("Search:");
+            ui.horizontal_centered(|ui| {
+                ui.text_edit_singleline(&mut self.search_query);
 
-                            if ui.button("❌").on_hover_text("Delete this note").clicked() {
-                                let path = format!("notes/{}", file_name);
-                                if let Err(err) = fs::remove_file(&path) {
-                                    eprintln!("Error deleting note: {}", err);
-                                }
-                            }
-                        });
-                    });
+                if ui.button("❌").on_hover_text("Clear search").clicked() {
+                    self.search_query.clear();
+                }
+            })
+        });
+
+        ui.separator();
+        ui.add_space(5.0);
+
+        // List files
+        let entries = fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
+
+        for entry in entries.flatten() {
+            let file_name = entry.file_name().into_string().unwrap_or_default();
+
+            // 🧠 Filter by search query
+            if !self.search_query.is_empty()
+                && !file_name
+                    .to_lowercase()
+                    .contains(&self.search_query.to_lowercase())
+            {
+                continue;
+            }
+
+            ui.horizontal(|ui| {
+                if ui
+                    .button(&file_name)
+                    .on_hover_text("Click to load this note")
+                    .clicked()
+                {
+                    self.load_note(&file_name);
+                }
+
+                if ui.button("❌").on_hover_text("Delete this note").clicked() {
+                    let path = format!("notes/{}", file_name);
+                    if let Err(err) = fs::remove_file(&path) {
+                        eprintln!("Error deleting note: {}", err);
+                    }
                 }
             });
+        }
+
+        ui.separator();
+        ui.add_space(10.0);
+
+        // ➕ New Note button
+        ui.vertical_centered(|ui| {
+            if ui.button("➕ New Note").clicked() {
+                self.note = Note::default();
+                self.save_path = None;
+                self.last_save_msg = None;
+            }
+        });
     }
 
     fn ui_editor(&mut self, ui: &mut egui::Ui) {
@@ -246,16 +290,6 @@ impl NoteApp {
                 }
             }
             self.note.content = lines.collect::<Vec<&str>>().join("\n");
-        }
-    }
-}
-
-impl Default for NoteApp {
-    fn default() -> Self {
-        Self {
-            note: Note::default(),
-            save_path: None,
-            last_save_msg: None,
         }
     }
 }
