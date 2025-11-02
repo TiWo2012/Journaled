@@ -1,7 +1,9 @@
-use crate::{Date, Note};
+use crate::Note;
 use eframe::egui;
+use serde::{Deserialize, Serialize};
+use serde_json;
 use std::fs;
-
+#[derive(Serialize, Deserialize)]
 pub struct NoteApp {
     note: Note,
     save_path: Option<String>,
@@ -53,34 +55,36 @@ impl NoteApp {
 
     fn ui_file_browser(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
-            ui.vertical_centered(|ui| {
-                ui.heading("📁 Notes");
-                ui.add_space(5.0);
-                ui.label("Search:");
-
-                ui.horizontal_centered(|ui| {
-                    ui.text_edit_singleline(&mut self.search_query);
-
-                    if ui.button("❌").on_hover_text("Clear search").clicked() {
-                        self.search_query.clear();
-                    }
-                });
-            });
-
-            ui.separator();
+            ui.heading("📁 Notes");
             ui.add_space(5.0);
+            ui.label("Search:");
 
-            egui::ScrollArea::vertical()
-                .auto_shrink([true; 2])
-                .stick_to_bottom(false)
-                .max_width(200.0)
-                .show(ui, |ui| {
-                    let entries =
-                        fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
+            ui.horizontal_centered(|ui| {
+                ui.text_edit_singleline(&mut self.search_query);
+                if ui.button("❌").on_hover_text("Clear search").clicked() {
+                    self.search_query.clear();
+                }
+            });
+        });
 
+        ui.separator();
+        ui.add_space(5.0);
+
+        // 🧭 Get remaining height for the scrollable list
+        let available_height = ui.available_height();
+
+        // Todo: Fix the scroll area
+        egui::ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .stick_to_bottom(false)
+            .max_height(available_height - 40.0) // leave space for “New Note” button
+            .show(ui, |ui| {
+                // List notes
+                if let Ok(entries) = fs::read_dir("notes/") {
                     for entry in entries.flatten() {
                         let file_name = entry.file_name().into_string().unwrap_or_default();
 
+                        // Apply search filter
                         if !self.search_query.is_empty()
                             && !file_name
                                 .to_lowercase()
@@ -88,39 +92,30 @@ impl NoteApp {
                         {
                             continue;
                         }
-                    }
 
-                    // TODO: Fix the scroplable area
-                    let entries =
-                        fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
-                    for entry in entries.flatten() {
-                        let file_name = entry.file_name().into_string().unwrap_or_default();
-
-                        if !self.search_query.is_empty()
-                            && !file_name
-                                .to_lowercase()
-                                .contains(&self.search_query.to_lowercase())
-                        {
-                            continue;
-                        }
+                        // Remove file extension for display
+                        let display_name = file_name.replace(".json", "");
 
                         ui.horizontal(|ui| {
-                            ui.group(|ui| {
-                                if ui.button(&file_name).clicked() {
-                                    self.load_note(&file_name);
-                                }
-                                if ui.button("❌").clicked() {
-                                    let _ = fs::remove_file(format!("notes/{}", file_name));
-                                }
-                            });
+                            if ui.button(&display_name).clicked() {
+                                self.load_note(&file_name);
+                            }
+
+                            if ui.button("❌").clicked() {
+                                let _ = fs::remove_file(format!("notes/{}", file_name));
+                            }
                         });
                     }
-                });
+                } else {
+                    ui.label("No notes found.");
+                }
+            });
 
-            ui.add_space(10.0);
-
-            // ➕ New Note button
-            self.ui_new_note(ui);
+        ui.add_space(10.0);
+        ui.vertical_centered(|ui| {
+            if ui.button("➕ New Note").clicked() {
+                self.ui_new_note(ui);
+            }
         });
     }
 
@@ -135,7 +130,7 @@ impl NoteApp {
                     // 💡 Auto-update filename when the title changes
                     if response.changed() {
                         // Only auto-update if save_path wasn’t set manually
-                        self.save_path = Some(format!("{}.txt", self.note.title));
+                        self.save_path = Some(format!("{}.json", self.note.title));
                     }
                 });
 
@@ -181,7 +176,7 @@ impl NoteApp {
                         ui.label("💾 Save Path:");
                         ui.text_edit_singleline(
                             self.save_path
-                                .get_or_insert_with(|| format!("{}.txt", self.note.title).into()),
+                                .get_or_insert_with(|| format!("{}.json", self.note.title).into()),
                         );
 
                         ui.add_space(10.0);
@@ -202,23 +197,17 @@ impl NoteApp {
 
     fn save_note(&self) {
         if let Some(path) = &self.save_path {
-            let content = format!(
-                "Title: {}\nDate: {:02}-{:02}-{}\n\n{}",
-                self.note.title,
-                self.note.date.day,
-                self.note.date.month,
-                self.note.date.year,
-                self.note.content
-            );
-
-            fs::DirBuilder::new()
-                .recursive(true)
-                .create("notes")
-                .unwrap_or(());
+            fs::create_dir_all("notes").unwrap_or(());
             let actual_save_path = format!("notes/{}", path);
 
-            if let Err(err) = fs::write(actual_save_path, content) {
-                eprintln!("Error saving note: {}", err);
+            // Serialize the Note struct into pretty JSON
+            match serde_json::to_string_pretty(&self.note) {
+                Ok(json) => {
+                    if let Err(err) = fs::write(&actual_save_path, json) {
+                        eprintln!("Error saving note: {}", err);
+                    }
+                }
+                Err(err) => eprintln!("Error serializing note: {}", err),
             }
         }
     }
@@ -239,29 +228,11 @@ impl NoteApp {
 
     fn load_note(&mut self, file_name: &str) {
         let path = format!("notes/{}", file_name);
-        if let Ok(content) = fs::read_to_string(&path) {
-            let mut lines = content.lines();
-            if let Some(title_line) = lines.next() {
-                if title_line.starts_with("Title: ") {
-                    self.note.title = title_line[7..].to_string();
-                }
+        if let Ok(json_str) = fs::read_to_string(&path) {
+            match serde_json::from_str::<Note>(&json_str) {
+                Ok(note) => self.note = note,
+                Err(err) => eprintln!("Error loading note: {}", err),
             }
-            if let Some(date_line) = lines.next() {
-                if date_line.starts_with("Date: ") {
-                    let date_str = &date_line[6..];
-                    let parts: Vec<&str> = date_str.split('-').collect();
-                    if parts.len() == 3 {
-                        if let (Ok(day), Ok(month), Ok(year)) = (
-                            parts[0].parse::<u32>(),
-                            parts[1].parse::<u32>(),
-                            parts[2].parse::<u32>(),
-                        ) {
-                            self.note.date = Date { day, month, year };
-                        }
-                    }
-                }
-            }
-            self.note.content = lines.collect::<Vec<&str>>().join("\n");
         }
     }
 
