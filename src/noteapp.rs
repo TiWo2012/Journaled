@@ -1,7 +1,10 @@
-use crate::{Date, Note};
+use crate::{Note};
 use eframe::egui;
+use serde::{Deserialize, Serialize};
+use serde_json;
 use std::fs;
 
+#[derive(Serialize, Deserialize)]
 pub struct NoteApp {
     note: Note,
     save_path: Option<String>,
@@ -135,7 +138,7 @@ impl NoteApp {
                     // 💡 Auto-update filename when the title changes
                     if response.changed() {
                         // Only auto-update if save_path wasn’t set manually
-                        self.save_path = Some(format!("{}.txt", self.note.title));
+                        self.save_path = Some(format!("{}.json", self.note.title));
                     }
                 });
 
@@ -202,23 +205,17 @@ impl NoteApp {
 
     fn save_note(&self) {
         if let Some(path) = &self.save_path {
-            let content = format!(
-                "Title: {}\nDate: {:02}-{:02}-{}\n\n{}",
-                self.note.title,
-                self.note.date.day,
-                self.note.date.month,
-                self.note.date.year,
-                self.note.content
-            );
-
-            fs::DirBuilder::new()
-                .recursive(true)
-                .create("notes")
-                .unwrap_or(());
+            fs::create_dir_all("notes").unwrap_or(());
             let actual_save_path = format!("notes/{}", path);
 
-            if let Err(err) = fs::write(actual_save_path, content) {
-                eprintln!("Error saving note: {}", err);
+            // Serialize the Note struct into pretty JSON
+            match serde_json::to_string_pretty(&self.note) {
+                Ok(json) => {
+                    if let Err(err) = fs::write(&actual_save_path, json) {
+                        eprintln!("Error saving note: {}", err);
+                    }
+                }
+                Err(err) => eprintln!("Error serializing note: {}", err),
             }
         }
     }
@@ -239,29 +236,11 @@ impl NoteApp {
 
     fn load_note(&mut self, file_name: &str) {
         let path = format!("notes/{}", file_name);
-        if let Ok(content) = fs::read_to_string(&path) {
-            let mut lines = content.lines();
-            if let Some(title_line) = lines.next() {
-                if title_line.starts_with("Title: ") {
-                    self.note.title = title_line[7..].to_string();
-                }
+        if let Ok(json_str) = fs::read_to_string(&path) {
+            match serde_json::from_str::<Note>(&json_str) {
+                Ok(note) => self.note = note,
+                Err(err) => eprintln!("Error loading note: {}", err),
             }
-            if let Some(date_line) = lines.next() {
-                if date_line.starts_with("Date: ") {
-                    let date_str = &date_line[6..];
-                    let parts: Vec<&str> = date_str.split('-').collect();
-                    if parts.len() == 3 {
-                        if let (Ok(day), Ok(month), Ok(year)) = (
-                            parts[0].parse::<u32>(),
-                            parts[1].parse::<u32>(),
-                            parts[2].parse::<u32>(),
-                        ) {
-                            self.note.date = Date { day, month, year };
-                        }
-                    }
-                }
-            }
-            self.note.content = lines.collect::<Vec<&str>>().join("\n");
         }
     }
 

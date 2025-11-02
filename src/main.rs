@@ -1,4 +1,5 @@
 use chrono::{Datelike, Local};
+use serde::{Deserialize, Serialize};
 
 mod noteapp;
 use noteapp::NoteApp;
@@ -18,6 +19,7 @@ fn main() -> eframe::Result<()> {
 // -----------------------------
 // Data Models
 // -----------------------------
+#[derive(Serialize, Deserialize)]
 struct Date {
     day: u32,
     month: u32,
@@ -36,6 +38,7 @@ impl Default for Date {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 struct Note {
     title: String,
     content: String,
