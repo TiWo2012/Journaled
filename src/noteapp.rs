@@ -184,7 +184,7 @@ impl NoteApp {
                         ui.label("💾 Save Path:");
                         ui.text_edit_singleline(
                             self.save_path
-                                .get_or_insert_with(|| format!("{}.txt", self.note.title).into()),
+                                .get_or_insert_with(|| format!("{}.json", self.note.title).into()),
                         );
 
                         ui.add_space(10.0);
