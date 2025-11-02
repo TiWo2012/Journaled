@@ -105,63 +105,59 @@ impl NoteApp {
 
     fn ui_file_browser(&mut self, ui: &mut egui::Ui) {
         ui.vertical_centered(|ui| {
-            ui.heading("📁 Notes");
-            ui.add_space(5.0);
-            ui.label("Search:");
+            ui.vertical_centered(|ui| {
+                ui.heading("📁 Notes");
+                ui.add_space(5.0);
+                ui.label("Search:");
 
-            ui.horizontal_centered(|ui| {
-                ui.text_edit_singleline(&mut self.search_query);
+                ui.horizontal_centered(|ui| {
+                    ui.text_edit_singleline(&mut self.search_query);
 
-                if ui.button("❌").on_hover_text("Clear search").clicked() {
-                    self.search_query.clear();
-                }
-            });
-        });
-
-        ui.separator();
-        ui.add_space(5.0);
-
-        egui::ScrollArea::vertical()
-            .auto_shrink([false; 2])
-            .stick_to_bottom(false)
-            .show(ui, |ui| {
-                let entries = fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
-
-                for entry in entries.flatten() {
-                    let file_name = entry.file_name().into_string().unwrap_or_default();
-
-                    if !self.search_query.is_empty()
-                        && !file_name
-                            .to_lowercase()
-                            .contains(&self.search_query.to_lowercase())
-                    {
-                        continue;
+                    if ui.button("❌").on_hover_text("Clear search").clicked() {
+                        self.search_query.clear();
                     }
-                }
+                });
+            });
 
-                let available_height = ui.available_height();
-                let desired_height = (available_height * 0.6).clamp(150.0, 400.0);
+            ui.separator();
+            ui.add_space(5.0);
 
-                // TODO: Fix the scroplable area
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false; 2])
-                    .stick_to_bottom(false)
-                    .max_height(800.0) // ensure it never grows beyond this
-                    .show(ui, |ui| {
-                        let entries =
-                            fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
-                        for entry in entries.flatten() {
-                            let file_name = entry.file_name().into_string().unwrap_or_default();
+            egui::ScrollArea::vertical()
+                .auto_shrink([true; 2])
+                .stick_to_bottom(false)
+                .max_width(200.0)
+                .show(ui, |ui| {
+                    let entries =
+                        fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
 
-                            if !self.search_query.is_empty()
-                                && !file_name
-                                    .to_lowercase()
-                                    .contains(&self.search_query.to_lowercase())
-                            {
-                                continue;
-                            }
+                    for entry in entries.flatten() {
+                        let file_name = entry.file_name().into_string().unwrap_or_default();
 
-                            ui.horizontal(|ui| {
+                        if !self.search_query.is_empty()
+                            && !file_name
+                                .to_lowercase()
+                                .contains(&self.search_query.to_lowercase())
+                        {
+                            continue;
+                        }
+                    }
+
+                    // TODO: Fix the scroplable area
+                    let entries =
+                        fs::read_dir("notes/").unwrap_or_else(|_| fs::read_dir(".").unwrap());
+                    for entry in entries.flatten() {
+                        let file_name = entry.file_name().into_string().unwrap_or_default();
+
+                        if !self.search_query.is_empty()
+                            && !file_name
+                                .to_lowercase()
+                                .contains(&self.search_query.to_lowercase())
+                        {
+                            continue;
+                        }
+
+                        ui.horizontal(|ui| {
+                            ui.group(|ui| {
                                 if ui.button(&file_name).clicked() {
                                     self.load_note(&file_name);
                                 }
@@ -169,15 +165,15 @@ impl NoteApp {
                                     let _ = fs::remove_file(format!("notes/{}", file_name));
                                 }
                             });
-                        }
-                    });
-            });
+                        });
+                    }
+                });
 
-        ui.separator();
-        ui.add_space(10.0);
+            ui.add_space(10.0);
 
-        // ➕ New Note button
-        self.ui_new_note(ui);
+            // ➕ New Note button
+            self.ui_new_note(ui);
+        });
     }
 
     fn ui_editor(&mut self, ui: &mut egui::Ui) {
