@@ -316,17 +316,31 @@ impl NoteApp {
             self.note.content = lines.collect::<Vec<&str>>().join("\n");
         }
     }
+
+    fn keyboard_shortcuts(&mut self, ctx: &egui::Context) {
+        if ctx.input(|i| i.key_pressed(egui::Key::S) && i.modifiers.ctrl) {
+            self.save_note();
+        }
+        
+        if ctx.input(|i| i.key_pressed(egui::Key::N) && i.modifiers.ctrl) {
+            self.new_note();
+        }
+        
+        // TODO: implement actual tabs
+        if ctx.input(|i| i.key_pressed(egui::Key::W) && i.modifiers.ctrl) {
+            self.new_note();
+        }
+        
+        if ctx.input(|i| i.key_pressed(egui::Key::Q) && i.modifiers.ctrl) {
+            std::process::exit(0);
+        }
+    }
 }
 
 impl eframe::App for NoteApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // keyboard shortcuts
-        if ctx.input(|i| i.key_pressed(egui::Key::S) && i.modifiers.ctrl) {
-            self.save_note();
-        }
-        if ctx.input(|i| i.key_pressed(egui::Key::N) && i.modifiers.ctrl) {
-            self.new_note();
-        }
+        self.keyboard_shortcuts(ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             self.ui(ui);
