@@ -72,12 +72,11 @@ impl NoteApp {
 
         // 🧭 Get remaining height for the scrollable list
         let available_height = ui.available_height();
-
-        // Todo: Fix the scroll area
+        println!("available_height: {}", available_height);
+        ui.set_min_height(400.0);
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .stick_to_bottom(false)
-            .max_height(available_height - 40.0) // leave space for “New Note” button
             .show(ui, |ui| {
                 // List notes
                 if let Ok(entries) = fs::read_dir("notes/") {
