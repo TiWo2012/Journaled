@@ -24,6 +24,8 @@ impl Default for NoteApp {
 
 impl NoteApp {
     fn ui(&mut self, ui: &mut egui::Ui) {
+        // 🧭 Get remaining height for the scrollable list
+        let available_height = ui.available_height();
         ui.horizontal(|ui| {
             // left side (file browser)
             ui.vertical(|ui| {
@@ -32,7 +34,7 @@ impl NoteApp {
                 ui.set_max_width(200.0);
 
                 // the explorer itself
-                self.ui_file_browser(ui);
+                self.ui_file_browser(ui, available_height);
             });
 
             ui.separator();
@@ -53,7 +55,7 @@ impl NoteApp {
         });
     }
 
-    fn ui_file_browser(&mut self, ui: &mut egui::Ui) {
+    fn ui_file_browser(&mut self, ui: &mut egui::Ui, available_height: f32) {
         ui.vertical_centered(|ui| {
             ui.heading("📁 Notes");
             ui.add_space(5.0);
@@ -70,10 +72,8 @@ impl NoteApp {
         ui.separator();
         ui.add_space(5.0);
 
-        // 🧭 Get remaining height for the scrollable list
-        let available_height = ui.available_height();
-        println!("available_height: {}", available_height);
-        ui.set_min_height(400.0);
+        // Note: Please don't fail me again scroll line
+        ui.set_min_height(available_height - 175.0);
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .stick_to_bottom(false)

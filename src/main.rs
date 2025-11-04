@@ -8,7 +8,9 @@ use noteapp::NoteApp;
 // Entry Point
 // -----------------------------
 fn main() -> eframe::Result<()> {
-    let options = eframe::NativeOptions::default();
+    let mut options = eframe::NativeOptions::default();
+    options.renderer = eframe::Renderer::Glow;
+    options.run_and_return = false;
     eframe::run_native(
         "Note Taking App",
         options,
