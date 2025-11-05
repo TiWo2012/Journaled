@@ -26,6 +26,8 @@ impl NoteApp {
     fn ui(&mut self, ui: &mut egui::Ui) {
         // 🧭 Get remaining height for the scrollable list
         let available_height = ui.available_height();
+        let available_width = ui.available_width();
+
         ui.horizontal(|ui| {
             // left side (file browser)
             ui.vertical(|ui| {
@@ -40,13 +42,35 @@ impl NoteApp {
             ui.separator();
 
             // right side (editor + save)
+            self.ui_editor(ui, available_width, available_height);
+        });
+    }
+
+    fn ui_editor(&mut self, ui: &mut egui::Ui, max_width: f32, max_height: f32) {
+        ui.vertical(|ui| {
+            egui::ScrollArea::horizontal()
+                .auto_shrink([false; 2])
+                .stick_to_bottom(false)
+                .id_salt("editor_horizontal_tab_scroll")
+                .max_height(25.0)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        for i in 0..1000 {
+                            let _ = ui.button(format!("File: {}", i));
+                        }
+                    });
+                });
+
+            ui.separator();
+            ui.add_space(15.0);
+
             ui.vertical_centered(|ui| {
                 // Title
                 ui.heading("📝 Journal Entry");
                 ui.add_space(10.0);
 
                 // Editor
-                self.ui_editor(ui);
+                self.ui_editor_core(ui);
                 ui.add_space(10.0);
 
                 // Save
@@ -118,7 +142,7 @@ impl NoteApp {
         });
     }
 
-    fn ui_editor(&mut self, ui: &mut egui::Ui) {
+    fn ui_editor_core(&mut self, ui: &mut egui::Ui) {
         egui::Frame::group(ui.style())
             .inner_margin(egui::vec2(10.0, 10.0))
             .show(ui, |ui| {
